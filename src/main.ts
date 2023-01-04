@@ -87,33 +87,32 @@ async function run(): Promise<void> {
 
       const partNumber = part;
 
-      const resolve = () => {};
+      promises.push(new Promise<void>(resolve => {
 
-      promises.push(new Promise<void>(resolve));
+        b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({data: partUrl}) => {
 
-      b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({data: partUrl}) => {
+          b2.uploadPart({
 
-        b2.uploadPart({
+            data: chunk,
 
-          data: chunk,
+            uploadUrl: partUrl.uploadUrl,
 
-          uploadUrl: partUrl.uploadUrl,
+            uploadAuthToken: partUrl.authorizationToken,
 
-          uploadAuthToken: partUrl.authorizationToken,
+            partNumber: partNumber
 
-          partNumber: partNumber
+          }).then(() => {
 
-        }).then(() => {
+            const hash = crypto.createHash('sha1');
 
-          const hash = crypto.createHash('sha1');
+            hash.update(chunk);
 
-          hash.update(chunk);
+            sh1Hashes[partNumber - 1] = hash.digest('hex');
 
-          sh1Hashes[partNumber - 1] = hash.digest('hex');
-
-          resolve();
+            resolve();
+          });
         });
-      });
+      }));
     });
 
     await new Promise<void>((resolve, reject) => {
