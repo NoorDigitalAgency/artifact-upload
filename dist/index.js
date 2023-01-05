@@ -63,7 +63,8 @@ function run() {
             searchResult.filesToUpload.forEach(file => core.debug(file));
             core.endGroup();
             const tmp = (_c = (_b = (_a = process.env['RUNNER_TEMP']) !== null && _a !== void 0 ? _a : process.env['TEMP']) !== null && _b !== void 0 ? _b : process.env['TMP']) !== null && _c !== void 0 ? _c : process.env['TMPDIR'];
-            const runId = (_d = process.env['GITHUB_RUN_ID']) !== null && _d !== void 0 ? _d : Math.floor(Math.random() * (999999 - 100000) + 100000);
+            const date = new Date();
+            const runId = (_d = process.env['GITHUB_RUN_ID']) !== null && _d !== void 0 ? _d : `${date.getFullYear()}${date.getMonth()}${date.getHours()}`;
             const artifactFileName = `${name}-${runId}`;
             const artifactFile = (0, path_1.resolve)(`${tmp}/${artifactFileName}`);
             const stream = fs.createWriteStream(artifactFile);

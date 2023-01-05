@@ -13,9 +13,13 @@ async function run(): Promise<void> {
 
     const name = core.getInput('name', {required: false}) || 'artifact-upload-file';
 
-    const path = core.getInput('path', {required: false}) || `
-    lib/main.js
-    lib/files`;
+    const path = core.getInput('path', {required: false}) || './';
+
+    const key = core.getInput('key', {required: false}) || 'K003biq6LWSel4z+ku9C/zO5eBIrulI';
+
+    const id = core.getInput('id', {required: false}) || '003b705a4cfb3c5000000001b';
+
+    const bucket = core.getInput('bucket', {required: false}) || 'github-artifacts';
 
     const searchResult = await findFilesToUpload(path);
 
@@ -33,7 +37,9 @@ async function run(): Promise<void> {
 
     const tmp = process.env['RUNNER_TEMP'] ?? process.env['TEMP'] ?? process.env['TMP'] ?? process.env['TMPDIR'];
 
-    const runId = process.env['GITHUB_RUN_ID'] ?? Math.floor(Math.random() * (999999 - 100000) + 100000);
+    const date = new Date();
+
+    const runId = process.env['GITHUB_RUN_ID'] ?? `${date.getFullYear()}${date.getMonth()}${date.getHours()}`;
 
     const artifactFileName = `${name}-${runId}`;
 
@@ -66,11 +72,11 @@ async function run(): Promise<void> {
 
     core.info(`Start of upload`);
 
-    const b2 = new B2({axios: axios, retry: {retries: 5}, applicationKey: 'K003biq6LWSel4z+ku9C/zO5eBIrulI', applicationKeyId: '003b705a4cfb3c5000000001b'});
+    const b2 = new B2({axios: axios, retry: {retries: 5}, applicationKey: key, applicationKeyId: id});
 
     await b2.authorize();
 
-    const id = (await b2.getBucket({ bucketName: 'github-artifacts' })).data.buckets.pop().bucketId as string;
+    const bucketId = (await b2.getBucket({ bucketName: bucket })).data.buckets.pop().bucketId as string;
 
     const size = fs.statSync(artifactFile).size / (1024*1024);
 
@@ -82,7 +88,7 @@ async function run(): Promise<void> {
 
       core.info(`Uploading ${partsCount} parts`);
 
-      const largeFile = (await b2.startLargeFile({ bucketId: id, fileName: artifactFileName })).data;
+      const largeFile = (await b2.startLargeFile({ bucketId: bucketId, fileName: artifactFileName })).data;
 
       const readStream = fs.createReadStream(artifactFile, {highWaterMark: chunkSize * 1024 * 1024 });
 
@@ -152,7 +158,7 @@ async function run(): Promise<void> {
 
       const buffer = fs.readFileSync(artifactFile);
 
-      const uploadInfo = (await b2.getUploadUrl({ bucketId: id })).data;
+      const uploadInfo = (await b2.getUploadUrl({ bucketId: bucketId })).data;
 
       await b2.uploadFile({
 
