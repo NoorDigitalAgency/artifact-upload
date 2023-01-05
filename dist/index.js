@@ -47,13 +47,14 @@ const crypto = __importStar(__nccwpck_require__(6417));
 const path_1 = __nccwpck_require__(5622);
 const search_1 = __nccwpck_require__(2506);
 function run() {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const name = core.getInput('name', { required: false }) || 'artifact-upload-file';
-            const path = core.getInput('path', { required: false }) || `
-    lib/main.js
-    lib/files`;
+            const name = core.getInput('name');
+            const path = core.getInput('path');
+            const key = core.getInput('key');
+            const id = core.getInput('id');
+            const bucket = core.getInput('bucket');
             const searchResult = yield (0, search_1.findFilesToUpload)(path);
             if (searchResult.filesToUpload.length === 0)
                 throw new Error('No files to upload');
@@ -63,8 +64,7 @@ function run() {
             searchResult.filesToUpload.forEach(file => core.debug(file));
             core.endGroup();
             const tmp = (_c = (_b = (_a = process.env['RUNNER_TEMP']) !== null && _a !== void 0 ? _a : process.env['TEMP']) !== null && _b !== void 0 ? _b : process.env['TMP']) !== null && _c !== void 0 ? _c : process.env['TMPDIR'];
-            const date = new Date();
-            const runId = (_d = process.env['GITHUB_RUN_ID']) !== null && _d !== void 0 ? _d : `${date.getFullYear()}${date.getMonth()}${date.getHours()}`;
+            const runId = `${process.env['GITHUB_REPOSITORY'].replace('/', '-')}-${process.env['GITHUB_RUN_ID']}`;
             const artifactFileName = `${name}-${runId}`;
             const artifactFile = (0, path_1.resolve)(`${tmp}/${artifactFileName}`);
             const stream = fs.createWriteStream(artifactFile);
@@ -81,15 +81,15 @@ function run() {
             yield archive.finalize();
             core.info(`End of bundling`);
             core.info(`Start of upload`);
-            const b2 = new backblaze_b2_1.default({ axios: axios_1.default, retry: { retries: 5 }, applicationKey: 'K003biq6LWSel4z+ku9C/zO5eBIrulI', applicationKeyId: '003b705a4cfb3c5000000001b' });
+            const b2 = new backblaze_b2_1.default({ axios: axios_1.default, retry: { retries: 5 }, applicationKey: key, applicationKeyId: id });
             yield b2.authorize();
-            const id = (yield b2.getBucket({ bucketName: 'github-artifacts' })).data.buckets.pop().bucketId;
+            const bucketId = (yield b2.getBucket({ bucketName: bucket })).data.buckets.pop().bucketId;
             const size = fs.statSync(artifactFile).size / (1024 * 1024);
             const chunkSize = 256;
             if (size > chunkSize) { // chunkSize or bigger
                 const partsCount = Math.ceil(size / chunkSize);
                 core.info(`Uploading ${partsCount} parts`);
-                const largeFile = (yield b2.startLargeFile({ bucketId: id, fileName: artifactFileName })).data;
+                const largeFile = (yield b2.startLargeFile({ bucketId: bucketId, fileName: artifactFileName })).data;
                 const readStream = fs.createReadStream(artifactFile, { highWaterMark: chunkSize * 1024 * 1024 });
                 let part = 0;
                 const promises = new Array();
@@ -129,7 +129,7 @@ function run() {
             }
             else { // smaller than chunkSize
                 const buffer = fs.readFileSync(artifactFile);
-                const uploadInfo = (yield b2.getUploadUrl({ bucketId: id })).data;
+                const uploadInfo = (yield b2.getUploadUrl({ bucketId: bucketId })).data;
                 yield b2.uploadFile({
                     data: buffer,
                     fileName: artifactFileName,

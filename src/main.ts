@@ -11,15 +11,15 @@ async function run(): Promise<void> {
 
   try {
 
-    const name = core.getInput('name', {required: false}) || 'artifact-upload-file';
+    const name = core.getInput('name');
 
-    const path = core.getInput('path', {required: false}) || './';
+    const path = core.getInput('path');
 
-    const key = core.getInput('key', {required: false}) || 'K003biq6LWSel4z+ku9C/zO5eBIrulI';
+    const key = core.getInput('key');
 
-    const id = core.getInput('id', {required: false}) || '003b705a4cfb3c5000000001b';
+    const id = core.getInput('id');
 
-    const bucket = core.getInput('bucket', {required: false}) || 'github-artifacts';
+    const bucket = core.getInput('bucket');
 
     const searchResult = await findFilesToUpload(path);
 
@@ -37,9 +37,7 @@ async function run(): Promise<void> {
 
     const tmp = process.env['RUNNER_TEMP'] ?? process.env['TEMP'] ?? process.env['TMP'] ?? process.env['TMPDIR'];
 
-    const date = new Date();
-
-    const runId = process.env['GITHUB_RUN_ID'] ?? `${date.getFullYear()}${date.getMonth()}${date.getHours()}`;
+    const runId = `${process.env['GITHUB_REPOSITORY']!.replace('/', '-')}-${process.env['GITHUB_RUN_ID']}`;
 
     const artifactFileName = `${name}-${runId}`;
 

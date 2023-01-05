@@ -1,11 +1,23 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Artifact Upload'
+description: 'Artifact Upload using Backblaze as the backend'
+author: 'Rojan Gh.'
 inputs:
-  milliseconds: # change this
+  name:
     required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+    description: 'Artifact name'
+  path:
+    required: true
+    description: 'Path to the contents to be uploaded'
+  key:
+    required: true
+    description: 'Backblaze application key'
+  id:
+    required: true
+    description: 'Backblaze application key id'
+  bucket:
+    required: false
+    description: 'Backblaze bucket name'
+    default: 'github-artifacts'
 runs:
   using: 'node16'
   main: 'dist/index.js'
