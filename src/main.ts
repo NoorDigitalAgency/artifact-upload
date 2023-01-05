@@ -4,163 +4,228 @@ import axios from 'axios';
 import archiver from 'archiver';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
+import { findFilesToUpload } from './search';
+import tar from 'tar';
 
 async function run(): Promise<void> {
 
-  const inputRegex = /^\s*\/*(?<name>.*?)\/*\s*$/gm;
+  try {
 
-  const name = core.getInput('name', {required: false}) || 'artifact';
+    const name = core.getInput('name', {required: false}) || 'artifact-upload-file';
 
-  const paths = [...new Set([...(core.getInput('path', {required: false}) || `
-  main.js
-  files/`).matchAll(inputRegex)].map(match => match.groups?.name))].filter(match => (match ?? '') !== '');
+    const path = core.getInput('path', {required: false}) || `
+    lib/main.js
+    lib/files`;
 
-  const tmp = process.env['RUNNER_TEMP'] ?? process.env['TEMP'] ?? process.env['TMP'] ?? process.env['TMPDIR'];
+    const searchResult = await findFilesToUpload(path);
 
-  const runId = process.env['GITHUB_RUN_ID'] ?? 'xyz';
+    if (searchResult.filesToUpload.length === 0) throw new Error('No files to upload');
 
-  const dirname = process.env['GITHUB_WORKSPACE'] ?? __dirname;
+    core.info(`Root directory: ${searchResult.rootDirectory}`);
 
-  const artifactFile = tmp + `/${runId}-artifacts-upload`;
+    core.info(`${searchResult.filesToUpload.length} files to upload`);
 
-  const stream = fs.createWriteStream(artifactFile);
+    core.startGroup('Files details');
 
-  const archive = archiver('tar', {gzip: true, gzipOptions: {level: 9}});
+    searchResult.filesToUpload.forEach(file => core.debug(file));
 
-  archive.pipe(stream);
+    core.endGroup();
 
-  for (const path of paths) {
+    const tmp = process.env['RUNNER_TEMP'] ?? process.env['TEMP'] ?? process.env['TMP'] ?? process.env['TMPDIR'];
 
-    const fullPath = `${dirname}/${path}`;
+    const runId = process.env['GITHUB_RUN_ID'] ?? Math.floor(Math.random() * (999999 - 100000) + 100000);
 
-    const stats = fs.statSync(fullPath);
+    const artifactFileName = `${name}-${runId}`;
 
-    if (stats.isFile()) {
+    const artifactFile = `${tmp}/${artifactFileName}`;
 
-      archive.file(fullPath, { name: path! });
+    const stream = fs.createWriteStream(artifactFile);
 
-    } else if (stats.isDirectory()) {
+    const archive = archiver('tar');
 
-      archive.directory(fullPath, path!);
+    archive.pipe(stream);
 
-    } else {
+    for (const path of searchResult.filesToUpload) {
 
-      throw new Error(`${fullPath} is neither a file nor a directory.`);
+      const name = path.split(searchResult.rootDirectory).pop();
+
+      archive.file(path, { name: name! });
     }
-  }
 
-  archive.on('progress', (progress) => {
+    archive.on('progress', (progress) => {
 
-    core.debug(`Total: ${progress.entries.total}, Processed: ${progress.entries.processed}`);
+      core.info(`Bundled ${progress.entries.processed} of ${progress.entries.total}`);
 
-  });
+    });
 
-  core.debug(`Start of compression`);
+    core.info(`Start of bundling`);
 
-  await archive.finalize();
+    await archive.finalize();
 
-  core.debug(`End of compression`);
+    core.info(`End of bundling`);
 
-  const b2 = new B2({axios: axios, applicationKey: 'K003biq6LWSel4z+ku9C/zO5eBIrulI', applicationKeyId: '003b705a4cfb3c5000000001b'});
+    core.info(`Start of upload`);
 
-  await b2.authorize();
+    const b2 = new B2({axios: axios, retry: {retries: 5}, applicationKey: 'K003biq6LWSel4z+ku9C/zO5eBIrulI', applicationKeyId: '003b705a4cfb3c5000000001b'});
 
-  const id = (await b2.getBucket({ bucketName: 'github-artifacts' })).data.buckets.pop().bucketId as string;
+    await b2.authorize();
 
-  const size = fs.statSync(artifactFile).size / (1024*1024);
+    const id = (await b2.getBucket({ bucketName: 'github-artifacts' })).data.buckets.pop().bucketId as string;
 
-  if (size > 500) { // 500MB or bigger
+    const size = fs.statSync(artifactFile).size / (1024*1024);
 
-    const largeFile = (await b2.startLargeFile({ bucketId: id, fileName: artifactFile })).data;
+    const chunkSize = 256;
 
-    const readStream = fs.createReadStream(artifactFile, {highWaterMark: 500 * 1024 * 1024 });
+    if (size > chunkSize) { // chunkSize or bigger
 
-    let part = 0;
+      const partsCount = Math.ceil(size / chunkSize);
 
-    const promises = new Array<Promise<void>>();
+      core.info(`Uploading ${partsCount} parts`);
 
-    const sh1Hashes = new Array<string>();
+      const largeFile = (await b2.startLargeFile({ bucketId: id, fileName: artifactFileName })).data;
 
-    readStream.on('data', (chunk: Buffer) => {
+      const readStream = fs.createReadStream(artifactFile, {highWaterMark: chunkSize * 1024 * 1024 });
 
-      part++;
+      let part = 0;
 
-      const partNumber = part;
+      const promises = new Array<Promise<void>>();
 
-      promises.push(new Promise<void>(resolve => {
+      const sh1Hashes = new Array<string>();
 
-        b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({data: partUrl}) => {
+      readStream.on('data', (chunk: Buffer) => {
 
-          b2.uploadPart({
+        part++;
 
-            data: chunk,
+        const partNumber = part;
 
-            uploadUrl: partUrl.uploadUrl,
+        core.info(`Start of part ${partNumber}`);
 
-            uploadAuthToken: partUrl.authorizationToken,
+        promises.push(new Promise<void>(resolve => {
 
-            partNumber: partNumber
+          b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({data: partUrl}) => {
 
-          }).then(() => {
+            b2.uploadPart({
 
-            const hash = crypto.createHash('sha1');
+              data: chunk,
 
-            hash.update(chunk);
+              uploadUrl: partUrl.uploadUrl,
 
-            sh1Hashes[partNumber - 1] = hash.digest('hex');
+              uploadAuthToken: partUrl.authorizationToken,
+
+              partNumber: partNumber
+
+            }).then(() => {
+
+              const hash = crypto.createHash('sha1');
+
+              hash.update(chunk);
+
+              sh1Hashes[partNumber - 1] = hash.digest('hex');
+
+              core.info(`End of part ${partNumber}`);
+
+              resolve();
+            });
+          });
+        }));
+      });
+
+      await new Promise<void>((resolve, reject) => {
+
+        readStream.on('end', () => {
+
+          Promise.all(promises).then(() => {
 
             resolve();
           });
         });
-      }));
-    });
 
-    await new Promise<void>((resolve, reject) => {
+        readStream.on('error', error => {
 
-      readStream.on('end', () => {
-
-        Promise.all(promises).then(() => {
-
-          resolve();
+          reject(error);
         });
       });
 
-      readStream.on('error', error => {
+      await b2.finishLargeFile({ fileId: largeFile.fileId, partSha1Array: sh1Hashes });
 
-        reject(error);
+    } else { // smaller than chunkSize
+
+      const buffer = fs.readFileSync(artifactFile);
+
+      const uploadInfo = (await b2.getUploadUrl({ bucketId: id })).data;
+
+      await b2.uploadFile({
+
+        data: buffer,
+
+        fileName: artifactFileName,
+
+        uploadUrl: uploadInfo.uploadUrl,
+
+        uploadAuthToken: uploadInfo.authorizationToken
+
+      });
+    }
+
+    core.info(`End of upload`);
+
+    const file = (await b2.listFileNames({ startFileName: artifactFileName, maxFileCount: 10000, prefix: '', delimiter: '/', bucketId: id })).data.files.pop();
+
+    console.log(file);
+
+    const stream1 = (await b2.downloadFileById({ fileId: file.fileId as string, responseType: 'stream' })).data;
+
+    const path1 = `${artifactFile}.down`;
+
+    console.log(path1);
+
+    const writer = fs.createWriteStream(path1);
+
+    await new Promise((resolve, reject) => {
+
+      stream1.pipe(writer);
+
+      let error = null as unknown;
+
+      writer.on('error', err => {
+
+        error = err;
+
+        writer.close();
+
+        reject(err);
+
+      });
+
+      writer.on('close', () => {
+
+        if (!error) {
+
+          resolve(true);
+        }
       });
     });
 
-    console.log();
+    await new Promise((resolve, reject) => {
 
-    await b2.finishLargeFile({ fileId: largeFile.fileId, partSha1Array: sh1Hashes });
+      fs.createReadStream(path1)
 
-  } else { // smaller than 500MB
+        .on('error', reject)
 
-  }
+        .on('end', resolve)
 
-  //const data3 = (await b2.startLargeFile({ bucketId: id, fileName: "xxx" })).data;
+        .pipe(tar.extract({
 
-  const buffer = fs.readFileSync(artifactFile);
+          path: `${path1}-extract/`,
 
-  const data1 = (await b2.getUploadUrl({ bucketId: id })).data;
+          strip: 0
 
-  const data2 = (await b2.uploadFile({
+        }));
+    });
 
-    data: buffer,
-
-    fileName: "artifacts-upload",
-
-    uploadUrl: data1.uploadUrl,
-
-    uploadAuthToken: data1.authorizationToken
-
-  })).data;
-
-  try {
-    core.setOutput('time', new Date().toTimeString())
   } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message)
+
+    if (error instanceof Error) core.setFailed(error.message);
   }
 }
 
