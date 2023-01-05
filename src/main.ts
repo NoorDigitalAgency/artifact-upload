@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { findFilesToUpload } from './search';
 import tar from 'tar';
+import {resolve} from 'path';
 
 async function run(): Promise<void> {
 
@@ -37,7 +38,7 @@ async function run(): Promise<void> {
 
     const artifactFileName = `${name}-${runId}`;
 
-    const artifactFile = `${tmp}/${artifactFileName}`;
+    const artifactFile = resolve(`${tmp}/${artifactFileName}`);
 
     const stream = fs.createWriteStream(artifactFile);
 
@@ -206,6 +207,10 @@ async function run(): Promise<void> {
       });
     });
 
+    const path2 = resolve(`${path1}-extract/`);
+
+    fs.mkdirSync(path2);
+
     await new Promise((resolve, reject) => {
 
       fs.createReadStream(path1)
@@ -216,10 +221,9 @@ async function run(): Promise<void> {
 
         .pipe(tar.extract({
 
-          path: `${path1}-extract/`,
+          cwd: path2,
 
           strip: 0
-
         }));
     });
 
