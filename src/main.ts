@@ -4,9 +4,8 @@ import axios from 'axios';
 import archiver from 'archiver';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
+import { resolve } from 'path';
 import { findFilesToUpload } from './search';
-import tar from 'tar';
-import {resolve} from 'path';
 
 async function run(): Promise<void> {
 
@@ -169,63 +168,6 @@ async function run(): Promise<void> {
     }
 
     core.info(`End of upload`);
-
-    const file = (await b2.listFileNames({ startFileName: artifactFileName, maxFileCount: 10000, prefix: '', delimiter: '/', bucketId: id })).data.files.pop();
-
-    console.log(file);
-
-    const stream1 = (await b2.downloadFileById({ fileId: file.fileId as string, responseType: 'stream' })).data;
-
-    const path1 = `${artifactFile}.down`;
-
-    console.log(path1);
-
-    const writer = fs.createWriteStream(path1);
-
-    await new Promise((resolve, reject) => {
-
-      stream1.pipe(writer);
-
-      let error = null as unknown;
-
-      writer.on('error', err => {
-
-        error = err;
-
-        writer.close();
-
-        reject(err);
-
-      });
-
-      writer.on('close', () => {
-
-        if (!error) {
-
-          resolve(true);
-        }
-      });
-    });
-
-    const path2 = resolve(`${path1}-extract/`);
-
-    fs.mkdirSync(path2);
-
-    await new Promise((resolve, reject) => {
-
-      fs.createReadStream(path1)
-
-        .on('error', reject)
-
-        .on('end', resolve)
-
-        .pipe(tar.extract({
-
-          cwd: path2,
-
-          strip: 0
-        }));
-    });
 
   } catch (error) {
 
