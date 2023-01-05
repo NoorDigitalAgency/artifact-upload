@@ -1,3 +1,8 @@
+TODO:
+- action.yml
+- notice artifact download link to the summary
+- readme
+
 <p align="center">
   <a href="https://github.com/actions/typescript-action/actions"><img alt="typescript-action status" src="https://github.com/actions/typescript-action/workflows/build-test/badge.svg"></a>
 </p>
