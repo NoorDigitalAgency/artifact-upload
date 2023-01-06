@@ -6,8 +6,9 @@ inputs:
     required: true
     description: 'Artifact name'
   path:
-    required: true
+    required: false
     description: 'Path to the contents to be uploaded'
+    default: './'
   key:
     required: true
     description: 'Backblaze application key'

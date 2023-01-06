@@ -7,14 +7,14 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { resolve } from 'path';
 import { findFilesToUpload } from './search';
+import { NoFileOptions } from "./constants";
+import { getInputs } from "./input-helper";
 
 async function run(): Promise<void> {
 
   try {
 
-    const name = core.getInput('name');
-
-    const path = core.getInput('path');
+    const inputs = getInputs();
 
     const key = core.getInput('key');
 
@@ -22,9 +22,35 @@ async function run(): Promise<void> {
 
     const bucket = core.getInput('bucket');
 
-    const searchResult = await findFilesToUpload(path);
+    const searchResult = await findFilesToUpload(inputs.searchPath);
 
-    if (searchResult.filesToUpload.length === 0) throw new Error('No files to upload');
+    if (searchResult.filesToUpload.length === 0) {
+
+      // No files were found, different use cases warrant different types of behavior if nothing is found
+      switch (inputs.ifNoFilesFound) {
+
+        case NoFileOptions.warn: {
+
+          core.warning(`No files were found with the provided path: ${inputs.searchPath}. No artifacts will be uploaded.`);
+
+          return;
+        }
+
+        case NoFileOptions.error: {
+
+          core.setFailed(`No files were found with the provided path: ${inputs.searchPath}. No artifacts will be uploaded.`);
+
+          return;
+        }
+
+        case NoFileOptions.ignore: {
+
+          core.info(`No files were found with the provided path: ${inputs.searchPath}. No artifacts will be uploaded.`);
+
+          return;
+        }
+      }
+    }
 
     core.info(`Root directory: ${searchResult.rootDirectory}`);
 
