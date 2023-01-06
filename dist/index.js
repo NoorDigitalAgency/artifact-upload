@@ -166,8 +166,9 @@ function run() {
             core.endGroup();
             const tmp = (_c = (_b = (_a = process.env['RUNNER_TEMP']) !== null && _a !== void 0 ? _a : process.env['TEMP']) !== null && _b !== void 0 ? _b : process.env['TMP']) !== null && _c !== void 0 ? _c : process.env['TMPDIR'];
             const runId = `${process.env['GITHUB_REPOSITORY'].replace('/', '-')}-${process.env['GITHUB_RUN_ID']}`;
-            const artifactFileName = `${name}-${runId}`;
+            const artifactFileName = `${inputs.artifactName}-${runId}`;
             const artifactFile = (0, path_1.resolve)(`${tmp}/${artifactFileName}`);
+            core.debug(`Artifact file path: ${artifactFile}`);
             const stream = fs.createWriteStream(artifactFile);
             const archive = (0, archiver_1.default)('tar');
             archive.pipe(stream);
@@ -240,6 +241,8 @@ function run() {
                 });
             }
             core.info(`End of upload`);
+            core.notice(`Bucket name: ${bucket}`);
+            core.notice(`Artifact name: ${artifactFileName}`);
         }
         catch (error) {
             if (error instanceof Error)

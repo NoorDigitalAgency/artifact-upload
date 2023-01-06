@@ -7,8 +7,8 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { resolve } from 'path';
 import { findFilesToUpload } from './search';
-import { NoFileOptions } from "./constants";
-import { getInputs } from "./input-helper";
+import { NoFileOptions } from './constants';
+import { getInputs } from './input-helper';
 
 async function run(): Promise<void> {
 
@@ -66,9 +66,11 @@ async function run(): Promise<void> {
 
     const runId = `${process.env['GITHUB_REPOSITORY']!.replace('/', '-')}-${process.env['GITHUB_RUN_ID']}`;
 
-    const artifactFileName = `${name}-${runId}`;
+    const artifactFileName = `${inputs.artifactName}-${runId}`;
 
     const artifactFile = resolve(`${tmp}/${artifactFileName}`);
+
+    core.debug(`Artifact file path: ${artifactFile}`);
 
     const stream = fs.createWriteStream(artifactFile);
 
@@ -201,6 +203,10 @@ async function run(): Promise<void> {
     }
 
     core.info(`End of upload`);
+
+    core.notice(`Bucket name: ${bucket}`);
+
+    core.notice(`Artifact name: ${artifactFileName}`);
 
   } catch (error) {
 
