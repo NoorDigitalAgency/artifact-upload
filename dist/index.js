@@ -241,7 +241,6 @@ function run() {
                 });
             }
             core.info(`End of upload`);
-            core.notice(`Bucket name: ${bucket}`);
             core.notice(`Artifact name: ${artifactFileName}`);
         }
         catch (error) {
