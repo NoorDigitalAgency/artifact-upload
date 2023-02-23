@@ -95,7 +95,7 @@ async function run(): Promise<void> {
 
     core.info(`Start of upload`);
 
-    axiosRetry(axios, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => error.response?.status === 503 });
+    axiosRetry(axios, { retries: 10, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => error.response?.status === 503 });
 
     const b2 = new B2({axios: axios, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId});
 
