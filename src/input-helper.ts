@@ -8,6 +8,9 @@ import {UploadInputs} from './upload-inputs'
 export function getInputs(): UploadInputs {
   const name = core.getInput(Inputs.Name)
   const path = core.getInput(Inputs.Path, {required: true})
+  const key = core.getInput(Inputs.Key, {required: true})
+  const id = core.getInput(Inputs.Id, {required: true})
+  const bucket = core.getInput(Inputs.Bucket)
 
   const ifNoFilesFound = core.getInput(Inputs.IfNoFilesFound) as NoFileOptions
   const noFileBehavior: NoFileOptions = NoFileOptions[ifNoFilesFound]
@@ -25,7 +28,10 @@ export function getInputs(): UploadInputs {
   const inputs = {
     artifactName: name,
     searchPath: path,
-    ifNoFilesFound: noFileBehavior
+    ifNoFilesFound: noFileBehavior,
+    backblazeKey: key,
+    backblazeKeyId: id,
+    backblazeBucketName: bucket
   } as UploadInputs
 
   const retentionDaysStr = core.getInput(Inputs.RetentionDays)

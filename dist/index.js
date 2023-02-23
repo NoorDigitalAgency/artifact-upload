@@ -15,6 +15,9 @@ var Inputs;
     Inputs["Path"] = "path";
     Inputs["IfNoFilesFound"] = "if-no-files-found";
     Inputs["RetentionDays"] = "retention-days";
+    Inputs["Key"] = "key";
+    Inputs["Id"] = "id";
+    Inputs["Bucket"] = "bucket";
 })(Inputs = exports.Inputs || (exports.Inputs = {}));
 var NoFileOptions;
 (function (NoFileOptions) {
@@ -69,6 +72,9 @@ const constants_1 = __nccwpck_require__(5105);
 function getInputs() {
     const name = core.getInput(constants_1.Inputs.Name);
     const path = core.getInput(constants_1.Inputs.Path, { required: true });
+    const key = core.getInput(constants_1.Inputs.Key, { required: true });
+    const id = core.getInput(constants_1.Inputs.Id, { required: true });
+    const bucket = core.getInput(constants_1.Inputs.Bucket);
     const ifNoFilesFound = core.getInput(constants_1.Inputs.IfNoFilesFound);
     const noFileBehavior = constants_1.NoFileOptions[ifNoFilesFound];
     if (!noFileBehavior) {
@@ -77,7 +83,10 @@ function getInputs() {
     const inputs = {
         artifactName: name,
         searchPath: path,
-        ifNoFilesFound: noFileBehavior
+        ifNoFilesFound: noFileBehavior,
+        backblazeKey: key,
+        backblazeKeyId: id,
+        backblazeBucketName: bucket
     };
     const retentionDaysStr = core.getInput(constants_1.Inputs.RetentionDays);
     if (retentionDaysStr) {
@@ -146,9 +155,6 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const inputs = (0, input_helper_1.getInputs)();
-            const key = core.getInput('key');
-            const id = core.getInput('id');
-            const bucket = core.getInput('bucket');
             const searchResult = yield (0, search_1.findFilesToUpload)(inputs.searchPath);
             if (searchResult.filesToUpload.length === 0) {
                 // No files were found, different use cases warrant different types of behavior if nothing is found
@@ -192,9 +198,9 @@ function run() {
             core.info(`End of bundling`);
             core.info(`Start of upload`);
             (0, axios_retry_1.default)(axios_1.default, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => { var _a; return ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 503; } });
-            const b2 = new backblaze_b2_1.default({ axios: axios_1.default, applicationKey: key, applicationKeyId: id });
+            const b2 = new backblaze_b2_1.default({ axios: axios_1.default, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId });
             yield b2.authorize();
-            const bucketId = (yield b2.getBucket({ bucketName: bucket })).data.buckets.pop().bucketId;
+            const bucketId = (yield b2.getBucket({ bucketName: inputs.backblazeBucketName })).data.buckets.pop().bucketId;
             const size = fs.statSync(artifactFile).size / (1024 * 1024);
             const chunkSize = 256;
             if (size > chunkSize) { // chunkSize or bigger

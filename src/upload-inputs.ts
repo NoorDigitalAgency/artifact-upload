@@ -20,4 +20,19 @@ export interface UploadInputs {
    * Duration after which artifact will expire in days
    */
   retentionDays: number
+
+  /**
+   * Backblaze Application Key
+   */
+  backblazeKey: string
+
+  /**
+   * Backblaze Application Key ID
+   */
+  backblazeKeyId: string
+
+  /**
+   * Backblaze Bucket Name
+   */
+  backblazeBucketName: string
 }

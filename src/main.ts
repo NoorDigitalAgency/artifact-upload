@@ -18,12 +18,6 @@ async function run(): Promise<void> {
 
     const inputs = getInputs();
 
-    const key = core.getInput('key');
-
-    const id = core.getInput('id');
-
-    const bucket = core.getInput('bucket');
-
     const searchResult = await findFilesToUpload(inputs.searchPath);
 
     if (searchResult.filesToUpload.length === 0) {
@@ -103,11 +97,11 @@ async function run(): Promise<void> {
 
     axiosRetry(axios, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => error.response?.status === 503 });
 
-    const b2 = new B2({axios: axios, applicationKey: key, applicationKeyId: id});
+    const b2 = new B2({axios: axios, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId});
 
     await b2.authorize();
 
-    const bucketId = (await b2.getBucket({ bucketName: bucket })).data.buckets.pop().bucketId as string;
+    const bucketId = (await b2.getBucket({ bucketName: inputs.backblazeBucketName })).data.buckets.pop().bucketId as string;
 
     const size = fs.statSync(artifactFile).size / (1024*1024);
 

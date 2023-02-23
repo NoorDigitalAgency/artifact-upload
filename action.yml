@@ -30,7 +30,7 @@ inputs:
   retention-days:
     required: false
     description: 'Duration after which artifact will expire in days'
-    default: 14
+    default: 21
 runs:
   using: 'node16'
   main: 'dist/index.js'
