@@ -10,6 +10,8 @@ import { findFilesToUpload } from './search';
 import { NoFileOptions } from './constants';
 import { getInputs } from './input-helper';
 
+type File = { fileId: string; fileName: string; uploadTimestamp: number | Date };
+
 async function run(): Promise<void> {
 
   try {
@@ -205,6 +207,33 @@ async function run(): Promise<void> {
     core.info(`End of upload`);
 
     core.notice(`Artifact name: ${artifactFileName}`);
+
+    core.info(`Start of retention`);
+
+    const date = new Date();
+
+    let files = new Array<File>();
+
+    let nextFileName = null as unknown as string;
+
+    do {
+
+      const response = await b2.listFileNames({ bucketId, startFileName: nextFileName, prefix: '', maxFileCount: 1000, delimiter: '' });
+
+      nextFileName = response.data.nextFileName;
+
+      files = [...files, ...(response.data.files as Array<File>).map(file => ({...file, uploadTimestamp: new Date(file.uploadTimestamp)}))]
+
+        .filter(file => ((date.getTime() - (file.uploadTimestamp as Date).getTime()) / (1000 * 3600 * 24)) > inputs.retentionDays);
+
+    } while (nextFileName != null);
+
+    for (const file of files) {
+
+      await b2.deleteFileVersion({ fileId: file.fileId, fileName: file.fileName });
+    }
+
+    core.info(`End of retention`);
 
   } catch (error) {
 
