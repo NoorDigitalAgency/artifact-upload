@@ -35,4 +35,9 @@ export interface UploadInputs {
    * Backblaze Bucket Name
    */
   backblazeBucketName: string
+
+  /**
+   * Upload chunk size
+   */
+  chunkSize: number
 }

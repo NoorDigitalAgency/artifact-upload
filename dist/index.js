@@ -18,6 +18,7 @@ var Inputs;
     Inputs["Key"] = "key";
     Inputs["Id"] = "id";
     Inputs["Bucket"] = "bucket";
+    Inputs["ChunkSize"] = "chunk-size";
 })(Inputs = exports.Inputs || (exports.Inputs = {}));
 var NoFileOptions;
 (function (NoFileOptions) {
@@ -93,6 +94,13 @@ function getInputs() {
         inputs.retentionDays = parseInt(retentionDaysStr);
         if (isNaN(inputs.retentionDays)) {
             core.setFailed('Invalid retention-days');
+        }
+    }
+    const chunkSizeStr = core.getInput(constants_1.Inputs.ChunkSize);
+    if (chunkSizeStr) {
+        inputs.chunkSize = parseInt(chunkSizeStr);
+        if (isNaN(inputs.chunkSize)) {
+            core.setFailed('Invalid chunk-size');
         }
     }
     return inputs;
@@ -202,7 +210,7 @@ function run() {
             yield b2.authorize();
             const bucketId = (yield b2.getBucket({ bucketName: inputs.backblazeBucketName })).data.buckets.pop().bucketId;
             const size = fs.statSync(artifactFile).size / (1024 * 1024);
-            const chunkSize = 256;
+            const chunkSize = inputs.chunkSize;
             if (size > chunkSize) { // chunkSize or bigger
                 const partsCount = Math.ceil(size / chunkSize);
                 core.info(`Uploading ${partsCount} parts`);

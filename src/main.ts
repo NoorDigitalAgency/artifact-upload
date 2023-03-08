@@ -105,7 +105,7 @@ async function run(): Promise<void> {
 
     const size = fs.statSync(artifactFile).size / (1024*1024);
 
-    const chunkSize = 256;
+    const chunkSize = inputs.chunkSize;
 
     if (size > chunkSize) { // chunkSize or bigger
 

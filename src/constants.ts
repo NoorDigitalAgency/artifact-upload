@@ -6,7 +6,8 @@ export enum Inputs {
   RetentionDays = 'retention-days',
   Key = 'key',
   Id = 'id',
-  Bucket = 'bucket'
+  Bucket = 'bucket',
+  ChunkSize = 'chunk-size'
 }
 
 export enum NoFileOptions {

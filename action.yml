@@ -31,6 +31,10 @@ inputs:
     required: false
     description: 'Duration after which artifact will expire in days'
     default: 21
+  chunk-size:
+    required: false
+    description: 'Upload chunk size in megabytes'
+    default: 256
 runs:
   using: 'node16'
   main: 'dist/index.js'

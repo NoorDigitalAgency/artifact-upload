@@ -42,5 +42,13 @@ export function getInputs(): UploadInputs {
     }
   }
 
+  const chunkSizeStr = core.getInput(Inputs.ChunkSize)
+  if (chunkSizeStr) {
+    inputs.chunkSize = parseInt(chunkSizeStr)
+    if (isNaN(inputs.chunkSize)) {
+      core.setFailed('Invalid chunk-size')
+    }
+  }
+
   return inputs
 }
