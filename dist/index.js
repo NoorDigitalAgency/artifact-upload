@@ -19,6 +19,7 @@ var Inputs;
     Inputs["Id"] = "id";
     Inputs["Bucket"] = "bucket";
     Inputs["ChunkSize"] = "chunk-size";
+    Inputs["MemoryLimit"] = "memory-limit";
 })(Inputs = exports.Inputs || (exports.Inputs = {}));
 var NoFileOptions;
 (function (NoFileOptions) {
@@ -101,6 +102,13 @@ function getInputs() {
         inputs.chunkSize = parseInt(chunkSizeStr);
         if (isNaN(inputs.chunkSize)) {
             core.setFailed('Invalid chunk-size');
+        }
+    }
+    const memoryLimitStr = core.getInput(constants_1.Inputs.MemoryLimit);
+    if (memoryLimitStr) {
+        inputs.memoryLimit = parseInt(memoryLimitStr);
+        if (isNaN(inputs.memoryLimit)) {
+            core.setFailed('Invalid memory-limit');
         }
     }
     return inputs;
@@ -211,6 +219,7 @@ function run() {
             const bucketId = (yield b2.getBucket({ bucketName: inputs.backblazeBucketName })).data.buckets.pop().bucketId;
             const size = fs.statSync(artifactFile).size / (1024 * 1024);
             const chunkSize = inputs.chunkSize;
+            const memoryLimit = inputs.memoryLimit;
             if (size > chunkSize) { // chunkSize or bigger
                 const partsCount = Math.ceil(size / chunkSize);
                 core.info(`Uploading ${partsCount} parts`);
@@ -230,7 +239,7 @@ function run() {
                             const hash = crypto.createHash('sha1');
                             hash.update(chunk);
                             sh1Hashes[partNumber - 1] = hash.digest('hex');
-                            core.info(`End of part ${partNumber}`);
+                            core.info(`End of part ${partNumber}/${partsCount}`);
                             resolve();
                         }).catch(error => {
                             var _a, _b, _c, _d;
@@ -256,12 +265,16 @@ function run() {
                         });
                     });
                 }
-                readStream.on('data', (chunk) => {
+                readStream.on('data', (chunk) => __awaiter(this, void 0, void 0, function* () {
                     part++;
                     const partNumber = part;
-                    core.info(`Start of part ${partNumber}`);
+                    core.info(`Start of part ${partNumber}/${partsCount}`);
+                    if (promises.length * chunkSize >= memoryLimit) {
+                        yield Promise.all(promises);
+                        promises.length = 0;
+                    }
                     promises.push(new Promise(resolve => uploadPart(partNumber, chunk, resolve)));
-                });
+                }));
                 yield new Promise((resolve, reject) => {
                     readStream.on('end', () => {
                         Promise.all(promises).then(() => {

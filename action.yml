@@ -30,11 +30,15 @@ inputs:
   retention-days:
     required: false
     description: 'Duration after which artifact will expire in days'
-    default: 21
+    default: '21'
   chunk-size:
     required: false
     description: 'Upload chunk size in megabytes'
-    default: 256
+    default: '256'
+  memory-limit:
+    required: false
+    description: 'Memory limit in megabytes'
+    default: '1024'
 runs:
   using: 'node16'
   main: 'dist/index.js'

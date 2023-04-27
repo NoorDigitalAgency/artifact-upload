@@ -50,5 +50,13 @@ export function getInputs(): UploadInputs {
     }
   }
 
+  const memoryLimitStr = core.getInput(Inputs.MemoryLimit)
+  if (memoryLimitStr) {
+    inputs.memoryLimit = parseInt(memoryLimitStr)
+    if (isNaN(inputs.memoryLimit)) {
+      core.setFailed('Invalid memory-limit')
+    }
+  }
+
   return inputs
 }

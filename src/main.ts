@@ -107,6 +107,8 @@ async function run(): Promise<void> {
 
     const chunkSize = inputs.chunkSize;
 
+    const memoryLimit = inputs.memoryLimit;
+
     if (size > chunkSize) { // chunkSize or bigger
 
       const partsCount = Math.ceil(size / chunkSize);
@@ -145,7 +147,7 @@ async function run(): Promise<void> {
 
             sh1Hashes[partNumber - 1] = hash.digest('hex');
 
-            core.info(`End of part ${partNumber}`);
+            core.info(`End of part ${partNumber}/${partsCount}`);
 
             resolve();
 
@@ -179,13 +181,20 @@ async function run(): Promise<void> {
         });
       }
 
-      readStream.on('data', (chunk: Buffer) => {
+      readStream.on('data', async (chunk: Buffer) => {
 
         part++;
 
         const partNumber = part;
 
-        core.info(`Start of part ${partNumber}`);
+        core.info(`Start of part ${partNumber}/${partsCount}`);
+
+        if (promises.length * chunkSize >= memoryLimit) {
+
+          await Promise.all(promises);
+
+          promises.length = 0;
+        }
 
         promises.push(new Promise<void>(resolve => uploadPart(partNumber, chunk, resolve)));
       });
@@ -223,7 +232,6 @@ async function run(): Promise<void> {
         uploadUrl: uploadInfo.uploadUrl,
 
         uploadAuthToken: uploadInfo.authorizationToken
-
       });
     }
 

@@ -39,5 +39,10 @@ export interface UploadInputs {
   /**
    * Upload chunk size
    */
-  chunkSize: number
+  chunkSize: number,
+
+  /**
+   * Memory limit
+   */
+  memoryLimit: number
 }
