@@ -205,7 +205,7 @@ function run() {
             yield archive.finalize();
             core.info(`End of bundling`);
             core.info(`Start of upload`);
-            (0, axios_retry_1.default)(axios_1.default, { retries: 10, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => { var _a; return ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 503; } });
+            (0, axios_retry_1.default)(axios_1.default, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => { var _a; return ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 503; } });
             const b2 = new backblaze_b2_1.default({ axios: axios_1.default, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId });
             yield b2.authorize();
             const bucketId = (yield b2.getBucket({ bucketName: inputs.backblazeBucketName })).data.buckets.pop().bucketId;
@@ -219,26 +219,48 @@ function run() {
                 let part = 0;
                 const promises = new Array();
                 const sh1Hashes = new Array();
+                function uploadPart(partNumber, chunk, resolve) {
+                    b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({ data: partUrl }) => {
+                        b2.uploadPart({
+                            data: chunk,
+                            uploadUrl: partUrl.uploadUrl,
+                            uploadAuthToken: partUrl.authorizationToken,
+                            partNumber: partNumber
+                        }).then(() => {
+                            const hash = crypto.createHash('sha1');
+                            hash.update(chunk);
+                            sh1Hashes[partNumber - 1] = hash.digest('hex');
+                            core.info(`End of part ${partNumber}`);
+                            resolve();
+                        }).catch(error => {
+                            var _a, _b, _c, _d;
+                            if (((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 503 || ((_b = error.response) === null || _b === void 0 ? void 0 : _b.status) === 408 || ((_c = error.response) === null || _c === void 0 ? void 0 : _c.status) === 401) {
+                                let warning = '';
+                                switch ((_d = error.response) === null || _d === void 0 ? void 0 : _d.status) {
+                                    case 503:
+                                        warning = `Service unavailable while uploading part ${partNumber}, retrying...`;
+                                        break;
+                                    case 408:
+                                        warning = `Request timeout while uploading part ${partNumber}, retrying...`;
+                                        break;
+                                    case 401:
+                                        warning = `Invalid authentication token while uploading part ${partNumber}, retrying...`;
+                                        break;
+                                }
+                                core.warning(warning);
+                                uploadPart(partNumber, chunk, resolve);
+                            }
+                            else {
+                                throw error;
+                            }
+                        });
+                    });
+                }
                 readStream.on('data', (chunk) => {
                     part++;
                     const partNumber = part;
                     core.info(`Start of part ${partNumber}`);
-                    promises.push(new Promise(resolve => {
-                        b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({ data: partUrl }) => {
-                            b2.uploadPart({
-                                data: chunk,
-                                uploadUrl: partUrl.uploadUrl,
-                                uploadAuthToken: partUrl.authorizationToken,
-                                partNumber: partNumber
-                            }).then(() => {
-                                const hash = crypto.createHash('sha1');
-                                hash.update(chunk);
-                                sh1Hashes[partNumber - 1] = hash.digest('hex');
-                                core.info(`End of part ${partNumber}`);
-                                resolve();
-                            });
-                        });
-                    }));
+                    promises.push(new Promise(resolve => uploadPart(partNumber, chunk, resolve)));
                 });
                 yield new Promise((resolve, reject) => {
                     readStream.on('end', () => {
