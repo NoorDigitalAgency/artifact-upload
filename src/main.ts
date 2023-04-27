@@ -191,6 +191,8 @@ async function run(): Promise<void> {
 
         if (promises.length * chunkSize >= memoryLimit) {
 
+          core.info(`Waiting for ${promises.length} parts to finish uploading before continuing`);
+
           await Promise.all(promises);
 
           promises.length = 0;
@@ -239,32 +241,50 @@ async function run(): Promise<void> {
 
     core.notice(`Artifact name: ${artifactFileName}`);
 
-    core.info(`Start of retention`);
+    try {
 
-    const date = new Date();
+      core.info(`Start of retention`);
 
-    let files = new Array<File>();
+      const date = new Date();
 
-    let nextFileName = null as unknown as string;
+      let files = new Array<File>();
 
-    do {
+      let nextFileName = null as unknown as string;
 
-      const response = await b2.listFileNames({ bucketId, startFileName: nextFileName, prefix: '', maxFileCount: 1000, delimiter: '' });
+      do {
 
-      nextFileName = response.data.nextFileName;
+        const response = await b2.listFileNames({
+          bucketId,
+          startFileName: nextFileName,
+          prefix: "",
+          maxFileCount: 1000,
+          delimiter: ""
+        });
 
-      files = [...files, ...(response.data.files as Array<File>).map(file => ({...file, uploadTimestamp: new Date(file.uploadTimestamp)}))]
+        nextFileName = response.data.nextFileName;
 
-        .filter(file => ((date.getTime() - (file.uploadTimestamp as Date).getTime()) / (1000 * 3600 * 24)) > inputs.retentionDays);
+        files = [...files, ...(response.data.files as Array<File>).map(file => ({
+          ...file,
+          uploadTimestamp: new Date(file.uploadTimestamp)
+        }))]
 
-    } while (nextFileName != null);
+          .filter(file => ((date.getTime() - (file.uploadTimestamp as Date).getTime()) / (1000 * 3600 * 24)) > inputs.retentionDays);
 
-    for (const file of files) {
+      } while (nextFileName != null);
 
-      await b2.deleteFileVersion({ fileId: file.fileId, fileName: file.fileName });
+      for (const file of files) {
+
+        await b2.deleteFileVersion({ fileId: file.fileId, fileName: file.fileName });
+      }
+
+      core.info(`End of retention`);
+
+    } catch (error) {
+
+      core.warning(`Retention failed`);
+
+      if (error instanceof Error) core.warning(error.message);
     }
-
-    core.info(`End of retention`);
 
   } catch (error) {
 

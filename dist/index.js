@@ -270,6 +270,7 @@ function run() {
                     const partNumber = part;
                     core.info(`Start of part ${partNumber}/${partsCount}`);
                     if (promises.length * chunkSize >= memoryLimit) {
+                        core.info(`Waiting for ${promises.length} parts to finish uploading before continuing`);
                         yield Promise.all(promises);
                         promises.length = 0;
                     }
@@ -299,20 +300,33 @@ function run() {
             }
             core.info(`End of upload`);
             core.notice(`Artifact name: ${artifactFileName}`);
-            core.info(`Start of retention`);
-            const date = new Date();
-            let files = new Array();
-            let nextFileName = null;
-            do {
-                const response = yield b2.listFileNames({ bucketId, startFileName: nextFileName, prefix: '', maxFileCount: 1000, delimiter: '' });
-                nextFileName = response.data.nextFileName;
-                files = [...files, ...response.data.files.map(file => (Object.assign(Object.assign({}, file), { uploadTimestamp: new Date(file.uploadTimestamp) })))]
-                    .filter(file => ((date.getTime() - file.uploadTimestamp.getTime()) / (1000 * 3600 * 24)) > inputs.retentionDays);
-            } while (nextFileName != null);
-            for (const file of files) {
-                yield b2.deleteFileVersion({ fileId: file.fileId, fileName: file.fileName });
+            try {
+                core.info(`Start of retention`);
+                const date = new Date();
+                let files = new Array();
+                let nextFileName = null;
+                do {
+                    const response = yield b2.listFileNames({
+                        bucketId,
+                        startFileName: nextFileName,
+                        prefix: "",
+                        maxFileCount: 1000,
+                        delimiter: ""
+                    });
+                    nextFileName = response.data.nextFileName;
+                    files = [...files, ...response.data.files.map(file => (Object.assign(Object.assign({}, file), { uploadTimestamp: new Date(file.uploadTimestamp) })))]
+                        .filter(file => ((date.getTime() - file.uploadTimestamp.getTime()) / (1000 * 3600 * 24)) > inputs.retentionDays);
+                } while (nextFileName != null);
+                for (const file of files) {
+                    yield b2.deleteFileVersion({ fileId: file.fileId, fileName: file.fileName });
+                }
+                core.info(`End of retention`);
             }
-            core.info(`End of retention`);
+            catch (error) {
+                core.warning(`Retention failed`);
+                if (error instanceof Error)
+                    core.warning(error.message);
+            }
         }
         catch (error) {
             if (error instanceof Error)
