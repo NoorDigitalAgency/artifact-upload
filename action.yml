@@ -38,7 +38,7 @@ inputs:
   memory-limit:
     required: false
     description: 'Memory limit in megabytes'
-    default: '1024'
+    default: '2048'
 runs:
   using: 'node16'
   main: 'dist/index.js'

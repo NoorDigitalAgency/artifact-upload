@@ -191,7 +191,7 @@ async function run(): Promise<void> {
 
           readStream.pause();
 
-          core.info(`Waiting for ${promises.length} parts to finish uploading before continuing`);
+          core.info(`Waiting for ${promises.length} parts (~${promises.length * chunkSize}MB) to finish uploading before continuing`);
 
           await Promise.all(promises);
 

@@ -270,7 +270,7 @@ function run() {
                     const partNumber = part;
                     if (promises.length * chunkSize >= memoryLimit) {
                         readStream.pause();
-                        core.info(`Waiting for ${promises.length} parts to finish uploading before continuing`);
+                        core.info(`Waiting for ${promises.length} parts (~${promises.length * chunkSize}MB) to finish uploading before continuing`);
                         yield Promise.all(promises);
                         promises.length = 0;
                         readStream.resume();
