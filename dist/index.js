@@ -226,6 +226,7 @@ function run() {
                 const largeFile = (yield b2.startLargeFile({ bucketId: bucketId, fileName: artifactFileName })).data;
                 const readStream = fs.createReadStream(artifactFile, { highWaterMark: chunkSize * 1024 * 1024 });
                 let part = 0;
+                let read = 0;
                 const promises = new Array();
                 const sh1Hashes = new Array();
                 function uploadPart(partNumber, chunk, resolve) {
@@ -268,15 +269,17 @@ function run() {
                 readStream.on('data', (chunk) => __awaiter(this, void 0, void 0, function* () {
                     part++;
                     const partNumber = part;
-                    if (promises.length * chunkSize >= memoryLimit) {
-                        readStream.pause();
-                        core.info(`Waiting for ${promises.length} parts (~${promises.length * chunkSize}MB) to finish uploading before continuing`);
-                        yield Promise.all(promises);
-                        promises.length = 0;
-                        readStream.resume();
-                    }
                     core.info(`Start of part ${partNumber}/${partsCount}`);
                     promises.push(new Promise(resolve => uploadPart(partNumber, chunk, resolve)));
+                    read += chunk.length;
+                    if (promises.length * chunkSize >= memoryLimit) {
+                        readStream.pause();
+                        core.info(`Waiting for ${promises.length} parts (~${read}MB) to finish uploading before continuing`);
+                        yield Promise.all(promises);
+                        promises.length = 0;
+                        read = 0;
+                        readStream.resume();
+                    }
                 }));
                 yield new Promise((resolve, reject) => {
                     readStream.on('end', () => {

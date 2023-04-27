@@ -121,6 +121,8 @@ async function run(): Promise<void> {
 
       let part = 0;
 
+      let read = 0;
+
       const promises = new Array<Promise<void>>();
 
       const sh1Hashes = new Array<string>();
@@ -187,22 +189,26 @@ async function run(): Promise<void> {
 
         const partNumber = part;
 
+        core.info(`Start of part ${partNumber}/${partsCount}`);
+
+        promises.push(new Promise<void>(resolve => uploadPart(partNumber, chunk, resolve)));
+
+        read += chunk.length;
+
         if (promises.length * chunkSize >= memoryLimit) {
 
           readStream.pause();
 
-          core.info(`Waiting for ${promises.length} parts (~${promises.length * chunkSize}MB) to finish uploading before continuing`);
+          core.info(`Waiting for ${promises.length} parts (~${read}MB) to finish uploading before continuing`);
 
           await Promise.all(promises);
 
           promises.length = 0;
 
+          read = 0;
+
           readStream.resume();
         }
-
-        core.info(`Start of part ${partNumber}/${partsCount}`);
-
-        promises.push(new Promise<void>(resolve => uploadPart(partNumber, chunk, resolve)));
       });
 
       await new Promise<void>((resolve, reject) => {
