@@ -268,12 +268,14 @@ function run() {
                 readStream.on('data', (chunk) => __awaiter(this, void 0, void 0, function* () {
                     part++;
                     const partNumber = part;
-                    core.info(`Start of part ${partNumber}/${partsCount}`);
                     if (promises.length * chunkSize >= memoryLimit) {
+                        readStream.pause();
                         core.info(`Waiting for ${promises.length} parts to finish uploading before continuing`);
                         yield Promise.all(promises);
                         promises.length = 0;
+                        readStream.resume();
                     }
+                    core.info(`Start of part ${partNumber}/${partsCount}`);
                     promises.push(new Promise(resolve => uploadPart(partNumber, chunk, resolve)));
                 }));
                 yield new Promise((resolve, reject) => {

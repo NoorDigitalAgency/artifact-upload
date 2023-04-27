@@ -187,16 +187,20 @@ async function run(): Promise<void> {
 
         const partNumber = part;
 
-        core.info(`Start of part ${partNumber}/${partsCount}`);
-
         if (promises.length * chunkSize >= memoryLimit) {
+
+          readStream.pause();
 
           core.info(`Waiting for ${promises.length} parts to finish uploading before continuing`);
 
           await Promise.all(promises);
 
           promises.length = 0;
+
+          readStream.resume();
         }
+
+        core.info(`Start of part ${partNumber}/${partsCount}`);
 
         promises.push(new Promise<void>(resolve => uploadPart(partNumber, chunk, resolve)));
       });
