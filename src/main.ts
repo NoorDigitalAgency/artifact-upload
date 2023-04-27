@@ -195,7 +195,7 @@ async function run(): Promise<void> {
 
         read += chunk.length;
 
-        if (promises.length * chunkSize >= memoryLimit) {
+        if (read >= memoryLimit) {
 
           readStream.pause();
 

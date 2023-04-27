@@ -272,7 +272,7 @@ function run() {
                     core.info(`Start of part ${partNumber}/${partsCount}`);
                     promises.push(new Promise(resolve => uploadPart(partNumber, chunk, resolve)));
                     read += chunk.length;
-                    if (promises.length * chunkSize >= memoryLimit) {
+                    if (read >= memoryLimit) {
                         readStream.pause();
                         core.info(`Waiting for ${promises.length} parts (~${read}MB) to finish uploading before continuing`);
                         yield Promise.all(promises);
