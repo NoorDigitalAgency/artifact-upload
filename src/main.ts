@@ -193,7 +193,7 @@ async function run(): Promise<void> {
 
         promises.push(new Promise<void>(resolve => uploadPart(partNumber, chunk, resolve)));
 
-        read += chunk.length;
+        read += chunk.length / (1024*1024);
 
         if (read >= memoryLimit) {
 
