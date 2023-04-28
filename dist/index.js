@@ -310,12 +310,12 @@ function run() {
                         readStream.resume();
                 }));
                 yield new Promise((resolve, reject) => {
-                    readStream.on('end', () => {
+                    readStream.once('end', () => {
                         Promise.all(promises).then(() => {
                             resolve();
                         });
                     });
-                    readStream.on('error', error => {
+                    readStream.once('error', error => {
                         reject(error);
                     });
                 });

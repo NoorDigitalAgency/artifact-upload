@@ -213,7 +213,7 @@ async function run(): Promise<void> {
 
       await new Promise<void>((resolve, reject) => {
 
-        readStream.on('end', () => {
+        readStream.once('end', () => {
 
           Promise.all(promises).then(() => {
 
@@ -221,7 +221,7 @@ async function run(): Promise<void> {
           });
         });
 
-        readStream.on('error', error => {
+        readStream.once('error', error => {
 
           reject(error);
         });
