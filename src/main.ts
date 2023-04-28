@@ -94,6 +94,14 @@ async function run(): Promise<void> {
 
     core.info(`End of bundling`);
 
+    const fileBuffer = fs.readFileSync(artifactFile);
+
+    const hashSum = crypto.createHash('sha1');
+
+    hashSum.update(fileBuffer);
+
+    core.info(`Artifact file size: ${fs.statSync(artifactFile).size / (1024*1024)}MB and hash: ${hashSum.digest('hex')}`);
+
     core.info(`Start of upload`);
 
     axiosRetry(axios, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => (error.response?.status ?? 0) >= 500 });
