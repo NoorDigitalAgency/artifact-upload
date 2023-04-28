@@ -71,16 +71,16 @@ function isPromiseResolved(promise) {
 }
 function removeResolved(promises) {
     return __awaiter(this, void 0, void 0, function* () {
-        const output = new Array();
+        const resolved = new Array();
         for (const promise of promises) {
-            if (!(yield isPromiseResolved(promise))) {
-                output.push(promise);
+            if (yield isPromiseResolved(promise)) {
+                resolved.push(promise);
             }
         }
-        for (const resolved of output) {
-            promises.slice(promises.indexOf(resolved), 1);
+        for (const promise of resolved) {
+            promises.slice(promises.indexOf(promise), 1);
         }
-        output.length = 0;
+        resolved.length = 0;
     });
 }
 exports.removeResolved = removeResolved;

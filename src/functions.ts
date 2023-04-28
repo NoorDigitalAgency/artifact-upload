@@ -21,20 +21,20 @@ function isPromiseResolved(promise: Promise<any>): Promise<boolean> {
 
 export async function removeResolved<T> (promises: Promise<T>[]) {
 
-  const output = new Array<Promise<T>>();
+  const resolved = new Array<Promise<T>>();
 
   for (const promise of promises) {
 
-    if (!await isPromiseResolved(promise)) {
+    if (await isPromiseResolved(promise)) {
 
-      output.push(promise);
+      resolved.push(promise);
     }
   }
 
-  for (const resolved of output) {
+  for (const promise of resolved) {
 
-    promises.slice(promises.indexOf(resolved), 1);
+    promises.slice(promises.indexOf(promise), 1);
   }
 
-  output.length = 0;
+  resolved.length = 0;
 }
