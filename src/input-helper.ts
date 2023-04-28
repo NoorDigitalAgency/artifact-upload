@@ -31,7 +31,8 @@ export function getInputs(): UploadInputs {
     ifNoFilesFound: noFileBehavior,
     backblazeKey: key,
     backblazeKeyId: id,
-    backblazeBucketName: bucket
+    backblazeBucketName: bucket,
+    compressionLevel: 0
   } as UploadInputs
 
   const retentionDaysStr = core.getInput(Inputs.RetentionDays)
@@ -55,6 +56,14 @@ export function getInputs(): UploadInputs {
     inputs.memoryLimit = parseInt(memoryLimitStr)
     if (isNaN(inputs.memoryLimit)) {
       core.setFailed('Invalid memory-limit')
+    }
+  }
+
+  const compressionLevelStr = core.getInput(Inputs.CompressionLevel);
+  if (compressionLevelStr) {
+    inputs.compressionLevel = parseInt(compressionLevelStr);
+    if (isNaN(inputs.compressionLevel)) {
+      core.setFailed('Invalid compression-level')
     }
   }
 

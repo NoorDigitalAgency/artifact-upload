@@ -44,5 +44,10 @@ export interface UploadInputs {
   /**
    * Memory limit
    */
-  memoryLimit: number
+  memoryLimit: number,
+
+  /**
+   * Compression level
+   */
+  compressionLevel: number
 }

@@ -8,7 +8,8 @@ export enum Inputs {
   Id = 'id',
   Bucket = 'bucket',
   ChunkSize = 'chunk-size',
-  MemoryLimit = 'memory-limit'
+  MemoryLimit = 'memory-limit',
+  CompressionLevel = 'compression-level'
 }
 
 export enum NoFileOptions {
