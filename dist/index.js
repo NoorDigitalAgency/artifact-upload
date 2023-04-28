@@ -240,7 +240,7 @@ function run() {
             yield archive.finalize();
             core.info(`End of bundling`);
             core.info(`Start of upload`);
-            (0, axios_retry_1.default)(axios_1.default, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => { var _a; return ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 503; } });
+            (0, axios_retry_1.default)(axios_1.default, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => { var _a, _b; return ((_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.status) !== null && _b !== void 0 ? _b : 0) >= 500; } });
             const b2 = new backblaze_b2_1.default({ axios: axios_1.default, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId });
             yield b2.authorize();
             const bucketId = (yield b2.getBucket({ bucketName: inputs.backblazeBucketName })).data.buckets.pop().bucketId;
