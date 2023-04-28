@@ -130,10 +130,6 @@ async function run(): Promise<void> {
 
       function uploadPart(partNumber: number, chunk: Buffer, resolve: () => void) {
 
-        const chunkSize = chunk.length / (1024*1024);
-
-        read += chunkSize;
-
         b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({data: partUrl}) => {
 
           b2.uploadPart({
@@ -156,7 +152,7 @@ async function run(): Promise<void> {
 
             core.info(`End of part ${partNumber}/${partsCount}`);
 
-            read -= chunkSize;
+            read -= chunk.length / (1024*1024);
 
             resolve();
 
@@ -196,16 +192,16 @@ async function run(): Promise<void> {
 
         const partNumber = part;
 
-        const memory = (chunk.length / (1024*1024) + read);
+        read += chunk.length;
 
-        while (memory >= memoryLimit) {
+        while (read >= memoryLimit) {
 
           if (!readStream.isPaused()) {
 
             readStream.pause();
           }
 
-          core.info(`Waiting for the memory to shrink from (${memory}MB) to below ${memoryLimit}MB`);
+          core.info(`Waiting for the memory to shrink from (${read}MB) to below ${memoryLimit}MB`);
 
           await Promise.race(promises);
 

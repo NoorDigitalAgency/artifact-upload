@@ -278,8 +278,6 @@ function run() {
                 const promises = new Array();
                 const sh1Hashes = new Array();
                 function uploadPart(partNumber, chunk, resolve) {
-                    const chunkSize = chunk.length / (1024 * 1024);
-                    read += chunkSize;
                     b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({ data: partUrl }) => {
                         b2.uploadPart({
                             data: chunk,
@@ -291,7 +289,7 @@ function run() {
                             hash.update(chunk);
                             sh1Hashes[partNumber - 1] = hash.digest('hex');
                             core.info(`End of part ${partNumber}/${partsCount}`);
-                            read -= chunkSize;
+                            read -= chunk.length / (1024 * 1024);
                             resolve();
                         }).catch(error => {
                             var _a, _b, _c, _d;
@@ -320,12 +318,12 @@ function run() {
                 readStream.on('data', (chunk) => __awaiter(this, void 0, void 0, function* () {
                     part++;
                     const partNumber = part;
-                    const memory = (chunk.length / (1024 * 1024) + read);
-                    while (memory >= memoryLimit) {
+                    read += chunk.length;
+                    while (read >= memoryLimit) {
                         if (!readStream.isPaused()) {
                             readStream.pause();
                         }
-                        core.info(`Waiting for the memory to shrink from (${memory}MB) to below ${memoryLimit}MB`);
+                        core.info(`Waiting for the memory to shrink from (${read}MB) to below ${memoryLimit}MB`);
                         yield Promise.race(promises);
                         yield (0, functions_1.removeResolved)(promises);
                     }
