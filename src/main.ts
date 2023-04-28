@@ -1,4 +1,4 @@
-import * as core from '@actions/core'
+import * as core from '@actions/core';
 import B2 from 'backblaze-b2';
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
@@ -192,7 +192,7 @@ async function run(): Promise<void> {
 
         const partNumber = part;
 
-        read += chunk.length;
+        read += chunk.length / (1024*1024);
 
         while (read >= memoryLimit) {
 
