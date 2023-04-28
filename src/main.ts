@@ -9,6 +9,7 @@ import { resolve } from 'path';
 import { findFilesToUpload } from './search';
 import { NoFileOptions } from './constants';
 import { getInputs } from './input-helper';
+import { removeResolved } from "./functions";
 
 type File = { fileId: string; fileName: string; uploadTimestamp: number | Date };
 
@@ -129,6 +130,10 @@ async function run(): Promise<void> {
 
       function uploadPart(partNumber: number, chunk: Buffer, resolve: () => void) {
 
+        const chunkSize = chunk.length / (1024*1024);
+
+        read += chunkSize;
+
         b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({data: partUrl}) => {
 
           b2.uploadPart({
@@ -150,6 +155,8 @@ async function run(): Promise<void> {
             sh1Hashes[partNumber - 1] = hash.digest('hex');
 
             core.info(`End of part ${partNumber}/${partsCount}`);
+
+            read -= chunkSize;
 
             resolve();
 
@@ -189,26 +196,27 @@ async function run(): Promise<void> {
 
         const partNumber = part;
 
+        const memory = (chunk.length / (1024*1024) + read);
+
+        while (memory >= memoryLimit) {
+
+          if (!readStream.isPaused()) {
+
+            readStream.pause();
+          }
+
+          core.info(`Waiting for the memory to shrink from (${memory}MB) to below ${memoryLimit}MB`);
+
+          await Promise.race(promises);
+
+          await removeResolved(promises);
+        }
+
         core.info(`Start of part ${partNumber}/${partsCount}`);
 
         promises.push(new Promise<void>(resolve => uploadPart(partNumber, chunk, resolve)));
 
-        read += chunk.length / (1024*1024);
-
-        if (read >= memoryLimit) {
-
-          readStream.pause();
-
-          core.info(`Waiting for ${promises.length} parts (~${read}MB) to finish uploading before continuing`);
-
-          await Promise.all(promises);
-
-          promises.length = 0;
-
-          read = 0;
-
-          readStream.resume();
-        }
+        if (readStream.isPaused()) readStream.resume();
       });
 
       await new Promise<void>((resolve, reject) => {

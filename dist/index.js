@@ -40,6 +40,53 @@ var NoFileOptions;
 
 /***/ }),
 
+/***/ 5360:
+/***/ (function(__unused_webpack_module, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.removeResolved = void 0;
+var PromiseState;
+(function (PromiseState) {
+    PromiseState["Pending"] = "pending";
+    PromiseState["Fulfilled"] = "fulfilled";
+    PromiseState["Rejected"] = "rejected";
+})(PromiseState || (PromiseState = {}));
+function promiseState(promise) {
+    const pending = {};
+    return Promise.race([promise, pending]).then(value => (value === pending) ? PromiseState.Pending : PromiseState.Fulfilled, () => PromiseState.Rejected);
+}
+function isPromiseResolved(promise) {
+    return promiseState(promise).then(state => state !== PromiseState.Pending);
+}
+function removeResolved(promises) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const output = new Array();
+        for (const promise of promises) {
+            if (!(yield isPromiseResolved(promise))) {
+                output.push(promise);
+            }
+        }
+        promises.length = 0;
+        promises.push(...output);
+        output.length = 0;
+    });
+}
+exports.removeResolved = removeResolved;
+//# sourceMappingURL=functions.js.map
+
+/***/ }),
+
 /***/ 3608:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -166,6 +213,7 @@ const path_1 = __nccwpck_require__(5622);
 const search_1 = __nccwpck_require__(6689);
 const constants_1 = __nccwpck_require__(9349);
 const input_helper_1 = __nccwpck_require__(3608);
+const functions_1 = __nccwpck_require__(5360);
 function run() {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
@@ -230,6 +278,8 @@ function run() {
                 const promises = new Array();
                 const sh1Hashes = new Array();
                 function uploadPart(partNumber, chunk, resolve) {
+                    const chunkSize = chunk.length / (1024 * 1024);
+                    read += chunkSize;
                     b2.getUploadPartUrl({ fileId: largeFile.fileId }).then(({ data: partUrl }) => {
                         b2.uploadPart({
                             data: chunk,
@@ -241,6 +291,7 @@ function run() {
                             hash.update(chunk);
                             sh1Hashes[partNumber - 1] = hash.digest('hex');
                             core.info(`End of part ${partNumber}/${partsCount}`);
+                            read -= chunkSize;
                             resolve();
                         }).catch(error => {
                             var _a, _b, _c, _d;
@@ -269,17 +320,19 @@ function run() {
                 readStream.on('data', (chunk) => __awaiter(this, void 0, void 0, function* () {
                     part++;
                     const partNumber = part;
+                    const memory = (chunk.length / (1024 * 1024) + read);
+                    while (memory >= memoryLimit) {
+                        if (!readStream.isPaused()) {
+                            readStream.pause();
+                        }
+                        core.info(`Waiting for the memory to shrink from (${memory}MB) to below ${memoryLimit}MB`);
+                        yield Promise.race(promises);
+                        yield (0, functions_1.removeResolved)(promises);
+                    }
                     core.info(`Start of part ${partNumber}/${partsCount}`);
                     promises.push(new Promise(resolve => uploadPart(partNumber, chunk, resolve)));
-                    read += chunk.length / (1024 * 1024);
-                    if (read >= memoryLimit) {
-                        readStream.pause();
-                        core.info(`Waiting for ${promises.length} parts (~${read}MB) to finish uploading before continuing`);
-                        yield Promise.all(promises);
-                        promises.length = 0;
-                        read = 0;
+                    if (readStream.isPaused())
                         readStream.resume();
-                    }
                 }));
                 yield new Promise((resolve, reject) => {
                     readStream.on('end', () => {
