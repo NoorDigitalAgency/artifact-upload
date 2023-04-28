@@ -227,7 +227,7 @@ function run() {
             const artifactFile = (0, path_1.resolve)(`${tmp}/${artifactFileName}`);
             core.debug(`Artifact file path: ${artifactFile}`);
             const stream = fs.createWriteStream(artifactFile);
-            const archive = (0, archiver_1.default)('tar');
+            const archive = (0, archiver_1.default)('tar', { gzip: true, gzipOptions: { level: 9 } });
             archive.pipe(stream);
             for (const path of searchResult.filesToUpload) {
                 const name = path.split(searchResult.rootDirectory).pop();

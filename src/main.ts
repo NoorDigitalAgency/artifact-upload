@@ -71,7 +71,7 @@ async function run(): Promise<void> {
 
     const stream = fs.createWriteStream(artifactFile);
 
-    const archive = archiver('tar');
+    const archive = archiver('tar', { gzip: true, gzipOptions: { level: 9 } });
 
     archive.pipe(stream);
 
