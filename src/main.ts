@@ -9,7 +9,7 @@ import { resolve } from 'path';
 import { findFilesToUpload } from './search';
 import { NoFileOptions } from './constants';
 import { getInputs } from './input-helper';
-import { delay } from "./functions";
+import { delay, promiser } from "./functions";
 
 type File = { fileId: string; fileName: string; uploadTimestamp: number | Date };
 
@@ -94,6 +94,8 @@ async function run(): Promise<void> {
 
     core.info(`End of bundling`);
 
+    const hashingPromiser = promiser<void>();
+
     const fileStream = fs.createReadStream(artifactFile);
 
     const hash = crypto.createHash('sha1');
@@ -103,7 +105,11 @@ async function run(): Promise<void> {
       hash.end();
 
       core.info(`Artifact file: size=${fs.statSync(artifactFile).size / (1024 * 1024)}MB, hash=${hash.read()}`);
+
+      hashingPromiser.resolve();
     });
+
+    await hashingPromiser.promise;
 
     core.info(`Start of upload`);
 
