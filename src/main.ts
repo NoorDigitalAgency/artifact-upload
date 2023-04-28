@@ -203,8 +203,6 @@ async function run(): Promise<void> {
           if (!readStream.isPaused()) {
 
             readStream.pause();
-
-            core.info(`Waiting for the memory to shrink from (${read}MB) to below ${memoryLimit}MB`);
           }
 
           await delay(1000);

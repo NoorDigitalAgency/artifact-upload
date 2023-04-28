@@ -303,7 +303,6 @@ function run() {
                     while (read >= memoryLimit) {
                         if (!readStream.isPaused()) {
                             readStream.pause();
-                            core.info(`Waiting for the memory to shrink from (${read}MB) to below ${memoryLimit}MB`);
                         }
                         yield (0, functions_1.delay)(1000);
                     }
