@@ -9,7 +9,7 @@ import { resolve } from 'path';
 import { findFilesToUpload } from './search';
 import { NoFileOptions } from './constants';
 import { getInputs } from './input-helper';
-import { removeResolved } from "./functions";
+import { delay } from "./functions";
 
 type File = { fileId: string; fileName: string; uploadTimestamp: number | Date };
 
@@ -192,6 +192,10 @@ async function run(): Promise<void> {
 
         const partNumber = part;
 
+        core.info(`Start of part ${partNumber}/${partsCount}`);
+
+        promises.push(new Promise<void>(resolve => uploadPart(partNumber, chunk, resolve)));
+
         read += chunk.length / (1024*1024);
 
         while (read >= memoryLimit) {
@@ -199,18 +203,12 @@ async function run(): Promise<void> {
           if (!readStream.isPaused()) {
 
             readStream.pause();
+
+            core.info(`Waiting for the memory to shrink from (${read}MB) to below ${memoryLimit}MB`);
           }
 
-          core.info(`Waiting for the memory to shrink from (${read}MB) to below ${memoryLimit}MB`);
-
-          await Promise.race(promises);
-
-          await removeResolved(promises);
+          await delay(1000);
         }
-
-        core.info(`Start of part ${partNumber}/${partsCount}`);
-
-        promises.push(new Promise<void>(resolve => uploadPart(partNumber, chunk, resolve)));
 
         if (readStream.isPaused()) readStream.resume();
       });

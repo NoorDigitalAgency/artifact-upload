@@ -55,35 +55,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.removeResolved = void 0;
-var PromiseState;
-(function (PromiseState) {
-    PromiseState["Pending"] = "pending";
-    PromiseState["Fulfilled"] = "fulfilled";
-    PromiseState["Rejected"] = "rejected";
-})(PromiseState || (PromiseState = {}));
-function promiseState(promise) {
-    const pending = {};
-    return Promise.race([promise, pending]).then(value => (value === pending) ? PromiseState.Pending : PromiseState.Fulfilled, () => PromiseState.Rejected);
-}
-function isPromiseResolved(promise) {
-    return promiseState(promise).then(state => state !== PromiseState.Pending);
-}
-function removeResolved(promises) {
+exports.delay = void 0;
+function delay(ms) {
     return __awaiter(this, void 0, void 0, function* () {
-        const resolved = new Array();
-        for (const promise of promises) {
-            if (yield isPromiseResolved(promise)) {
-                resolved.push(promise);
-            }
-        }
-        for (const promise of resolved) {
-            promises.slice(promises.indexOf(promise), 1);
-        }
-        resolved.length = 0;
+        return new Promise(resolve => setTimeout(resolve, ms));
     });
 }
-exports.removeResolved = removeResolved;
+exports.delay = delay;
 //# sourceMappingURL=functions.js.map
 
 /***/ }),
@@ -319,17 +297,16 @@ function run() {
                 readStream.on('data', (chunk) => __awaiter(this, void 0, void 0, function* () {
                     part++;
                     const partNumber = part;
+                    core.info(`Start of part ${partNumber}/${partsCount}`);
+                    promises.push(new Promise(resolve => uploadPart(partNumber, chunk, resolve)));
                     read += chunk.length / (1024 * 1024);
                     while (read >= memoryLimit) {
                         if (!readStream.isPaused()) {
                             readStream.pause();
+                            core.info(`Waiting for the memory to shrink from (${read}MB) to below ${memoryLimit}MB`);
                         }
-                        core.info(`Waiting for the memory to shrink from (${read}MB) to below ${memoryLimit}MB`);
-                        yield Promise.race(promises);
-                        yield (0, functions_1.removeResolved)(promises);
+                        yield (0, functions_1.delay)(1000);
                     }
-                    core.info(`Start of part ${partNumber}/${partsCount}`);
-                    promises.push(new Promise(resolve => uploadPart(partNumber, chunk, resolve)));
                     if (readStream.isPaused())
                         readStream.resume();
                 }));
