@@ -21,8 +21,6 @@ function isPromiseResolved(promise: Promise<any>): Promise<boolean> {
 
 export async function removeResolved<T> (promises: Promise<T>[]) {
 
-  core.debug(`Removing resolved promises from ${promises.length} promises`);
-
   const output = new Array<Promise<T>>();
 
   for (const promise of promises) {
@@ -33,9 +31,10 @@ export async function removeResolved<T> (promises: Promise<T>[]) {
     }
   }
 
-  core.debug(`Removed ${promises.length - output.length} resolved promises`);
+  for (const resolved of output) {
 
-  promises = output;
+    promises.slice(promises.indexOf(resolved), 1);
+  }
 
-  core.debug(`Remaining ${promises.length} promises`);
+  output.length = 0;
 }
