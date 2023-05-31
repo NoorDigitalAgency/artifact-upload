@@ -20,6 +20,7 @@ var Inputs;
     Inputs["Bucket"] = "bucket";
     Inputs["ChunkSize"] = "chunk-size";
     Inputs["MemoryLimit"] = "memory-limit";
+    Inputs["CompressionLevel"] = "compression-level";
 })(Inputs = exports.Inputs || (exports.Inputs = {}));
 var NoFileOptions;
 (function (NoFileOptions) {
@@ -114,7 +115,8 @@ function getInputs() {
         ifNoFilesFound: noFileBehavior,
         backblazeKey: key,
         backblazeKeyId: id,
-        backblazeBucketName: bucket
+        backblazeBucketName: bucket,
+        compressionLevel: 0
     };
     const retentionDaysStr = core.getInput(constants_1.Inputs.RetentionDays);
     if (retentionDaysStr) {
@@ -135,6 +137,13 @@ function getInputs() {
         inputs.memoryLimit = parseInt(memoryLimitStr);
         if (isNaN(inputs.memoryLimit)) {
             core.setFailed('Invalid memory-limit');
+        }
+    }
+    const compressionLevelStr = core.getInput(constants_1.Inputs.CompressionLevel);
+    if (compressionLevelStr) {
+        inputs.compressionLevel = parseInt(compressionLevelStr);
+        if (isNaN(inputs.compressionLevel)) {
+            core.setFailed('Invalid compression-level');
         }
     }
     return inputs;
@@ -227,7 +236,7 @@ function run() {
             const artifactFile = (0, path_1.resolve)(`${tmp}/${artifactFileName}`);
             core.debug(`Artifact file path: ${artifactFile}`);
             const stream = fs.createWriteStream(artifactFile);
-            const archive = (0, archiver_1.default)('tar');
+            const archive = (0, archiver_1.default)('tar', (inputs.compressionLevel > 0 ? { gzip: true, gzipOptions: { level: inputs.compressionLevel } } : {}));
             archive.pipe(stream);
             for (const path of searchResult.filesToUpload) {
                 const name = path.split(searchResult.rootDirectory).pop();

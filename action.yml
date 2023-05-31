@@ -39,6 +39,10 @@ inputs:
     required: false
     description: 'Memory limit in megabytes'
     default: '2048'
+  compression-level:
+    required: false
+    description: 'Compression level'
+    default: '0'
 runs:
   using: 'node16'
   main: 'dist/index.js'
