@@ -96,7 +96,15 @@ async function run(): Promise<void> {
 
     core.info(`Start of upload`);
 
-    axiosRetry(axios, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => (error.response?.status ?? 0) >= 500 });
+    axiosRetry(axios, { retries: 10, retryDelay: (retryCount) => retryCount * 1000, retryCondition: (error) => {
+
+        const condition = !error.response?.config?.url?.includes("b2_upload_part") && (error.response?.status ?? 0) >= 500;
+
+        core.warning(`Retry condition is '${condition}' for '${error.response?.config?.url}'.`);
+
+        return condition;
+      }
+    });
 
     const b2 = new B2({axios: axios, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId});
 

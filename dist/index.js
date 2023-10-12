@@ -249,7 +249,13 @@ function run() {
             yield archive.finalize();
             core.info(`End of bundling`);
             core.info(`Start of upload`);
-            (0, axios_retry_1.default)(axios_1.default, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => { var _a, _b; return ((_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.status) !== null && _b !== void 0 ? _b : 0) >= 500; } });
+            (0, axios_retry_1.default)(axios_1.default, { retries: 10, retryDelay: (retryCount) => retryCount * 1000, retryCondition: (error) => {
+                    var _a, _b, _c, _d, _e, _f, _g;
+                    const condition = !((_c = (_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.config) === null || _b === void 0 ? void 0 : _b.url) === null || _c === void 0 ? void 0 : _c.includes("b2_upload_part")) && ((_e = (_d = error.response) === null || _d === void 0 ? void 0 : _d.status) !== null && _e !== void 0 ? _e : 0) >= 500;
+                    core.warning(`Retry condition is '${condition}' for '${(_g = (_f = error.response) === null || _f === void 0 ? void 0 : _f.config) === null || _g === void 0 ? void 0 : _g.url}'.`);
+                    return condition;
+                }
+            });
             const b2 = new backblaze_b2_1.default({ axios: axios_1.default, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId });
             yield b2.authorize();
             const bucketId = (yield b2.getBucket({ bucketName: inputs.backblazeBucketName })).data.buckets.pop().bucketId;
