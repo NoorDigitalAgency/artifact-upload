@@ -193,7 +193,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(7535));
 const backblaze_b2_1 = __importDefault(__nccwpck_require__(6232));
 const axios_1 = __importDefault(__nccwpck_require__(1183));
-const axios_retry_1 = __importDefault(__nccwpck_require__(52));
 const archiver_1 = __importDefault(__nccwpck_require__(3259));
 const fs = __importStar(__nccwpck_require__(5747));
 const crypto = __importStar(__nccwpck_require__(6417));
@@ -249,8 +248,7 @@ function run() {
             yield archive.finalize();
             core.info(`End of bundling`);
             core.info(`Start of upload`);
-            (0, axios_retry_1.default)(axios_1.default, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => { var _a, _b; return ((_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.status) !== null && _b !== void 0 ? _b : 0) >= 500; } });
-            const b2 = new backblaze_b2_1.default({ axios: axios_1.default, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId });
+            const b2 = new backblaze_b2_1.default({ axios: axios_1.default, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId, retry: { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => { var _a, _b; return ((_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.status) !== null && _b !== void 0 ? _b : 0) >= 500; } } });
             yield b2.authorize();
             const bucketId = (yield b2.getBucket({ bucketName: inputs.backblazeBucketName })).data.buckets.pop().bucketId;
             const size = fs.statSync(artifactFile).size / (1024 * 1024);

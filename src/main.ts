@@ -1,7 +1,6 @@
 import * as core from '@actions/core';
 import B2 from 'backblaze-b2';
-import axios from 'axios';
-import axiosRetry from 'axios-retry';
+import axios, { AxiosError } from "axios";
 import archiver from 'archiver';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
@@ -96,9 +95,7 @@ async function run(): Promise<void> {
 
     core.info(`Start of upload`);
 
-    axiosRetry(axios, { retries: 5, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => (error.response?.status ?? 0) >= 500 });
-
-    const b2 = new B2({axios: axios, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId});
+    const b2 = new B2({axios: axios, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId, retry: { retries: 5, retryDelay: (retryCount: number) => retryCount * 1250, retryCondition: (error: AxiosError) => (error.response?.status ?? 0) >= 500 }});
 
     await b2.authorize();
 
