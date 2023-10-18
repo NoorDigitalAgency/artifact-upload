@@ -249,9 +249,9 @@ function run() {
             core.info(`End of bundling`);
             core.info(`Start of upload`);
             const b2 = new backblaze_b2_1.default({ axios: axios_1.default, applicationKey: inputs.backblazeKey, applicationKeyId: inputs.backblazeKeyId, retry: { retries: 10, retryDelay: (retryCount) => retryCount * 1250, retryCondition: (error) => {
-                        var _a, _b, _c, _d, _e, _f, _g;
+                        var _a, _b, _c, _d, _e, _f, _g, _h;
                         const condition = ((_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.status) !== null && _b !== void 0 ? _b : 0) >= 500 && !((_e = (_d = (_c = error.response) === null || _c === void 0 ? void 0 : _c.config) === null || _d === void 0 ? void 0 : _d.url) === null || _e === void 0 ? void 0 : _e.includes("b2_upload_part"));
-                        core.warning(`Retry condition is '${condition}' for '${(_g = (_f = error.response) === null || _f === void 0 ? void 0 : _f.config) === null || _g === void 0 ? void 0 : _g.url}'.`);
+                        core.warning(`Retry condition is '${condition}' for '${(_g = (_f = error.response) === null || _f === void 0 ? void 0 : _f.config) === null || _g === void 0 ? void 0 : _g.url}' (${(_h = error.response) === null || _h === void 0 ? void 0 : _h.status}).`);
                         return condition;
                     }
                 } });

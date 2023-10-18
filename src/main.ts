@@ -99,7 +99,7 @@ async function run(): Promise<void> {
 
           const condition = (error.response?.status ?? 0) >= 500 && !error.response?.config?.url?.includes("b2_upload_part");
 
-          core.warning(`Retry condition is '${condition}' for '${error.response?.config?.url}'.`);
+          core.warning(`Retry condition is '${condition}' for '${error.response?.config?.url}' (${error.response?.status}).`);
 
           return condition;
         }
